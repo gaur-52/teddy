@@ -1,196 +1,228 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2D Ball Game</title>
-    <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-        }
-        canvas {
-            display: block;
-            background-color: #87CEEB; /* Sky blue */
-        }
-        .toggle-container {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            z-index: 10;
-        }
-    </style>
-</head>
-<body>
-<div class="toggle-container">
-    <label>
-        <input type="checkbox" id="stickyModeToggle" checked> Sticky Mode
-    </label>
-</div>
-<canvas id="gameCanvas"></canvas>
-<script>
-    const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d");
-
-    const stickyModeToggle = document.getElementById("stickyModeToggle");
-    let stickyMode = true;
-
-    stickyModeToggle.addEventListener("change", () => {
-        stickyMode = stickyModeToggle.checked;
-    });
-
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-
-    const gravity = 0.5;
-    const ball = {
-        x: canvas.width / 2,
-        y: canvas.height - 50,
-        radius: 20,
-        color: "red",
-        dx: 0,
-        dy: 0,
-        isJumping: false,
-        onBar: null
-    };
-
-    const ground = {
-        x: 0,
-        y: canvas.height - 20,
-        width: canvas.width,
-        height: 20,
-        color: "green"
-    };
-
-    const bars = [];
-    for (let i = 0; i < 50; i++) {
-        bars.push({
-            x: Math.random() * (canvas.width - 150),
-            y: canvas.height - (i + 1) * 100,
-            width: 150,
-            height: 10,
-            dx: Math.random() < 0.5 ? 2 : -2
-        });
-    }
-
-    let offsetY = 0;
-
-    function drawBall() {
-        ctx.beginPath();
-        ctx.arc(ball.x, ball.y - offsetY, ball.radius, 0, Math.PI * 2);
-        ctx.fillStyle = ball.color;
-        ctx.fill();
-        ctx.closePath();
-    }
-
-    function drawGround() {
-        ctx.fillStyle = ground.color;
-        ctx.fillRect(ground.x, ground.y - offsetY, canvas.width, ground.height);
-    }
-
-    function drawBars() {
-        bars.forEach(bar => {
-            ctx.fillStyle = "blue";
-            ctx.fillRect(bar.x, bar.y - offsetY, bar.width, bar.height);
-        });
-    }
-
-    function moveBars() {
-        bars.forEach(bar => {
-            bar.x += bar.dx;
-
-            // Reverse direction if hitting canvas boundaries
-            if (bar.x <= 0 || bar.x + bar.width >= canvas.width) {
-                bar.dx *= -1;
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>2D Ball Game</title>
+        <style>
+            body {
+                margin: 0;
+                overflow: hidden;
             }
+            canvas {
+                display: block;
+                background-color: #87CEEB; /* Sky blue */
+            }
+            .toggle-container {
+                position: absolute;
+                top: 10px;
+                left: 10px;
+                z-index: 10;
+            }
+        </style>
+    </head>
+    <body>
+    <div class="toggle-container">
+        <label>
+            <input type="checkbox" id="stickyModeToggle" checked> baby Mode
+        </label>
+    </div>
+    <canvas id="gameCanvas"></canvas>
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        const stickyModeToggle = document.getElementById("stickyModeToggle");
+        let stickyMode = true;
+
+        stickyModeToggle.addEventListener("change", () => {
+            stickyMode = stickyModeToggle.checked;
         });
-    }
 
-    function moveBall() {
-        if (stickyMode && ball.onBar) {
-            ball.x += ball.onBar.dx; // Move with the bar
-        } else {
-            ball.dy += gravity;
-            ball.y += ball.dy;
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const gravity = 0.5;
+        const ball = {
+            x: canvas.width / 2,
+            y: canvas.height - 50,
+            radius: 20,
+            dx: 0,
+            dy: 0,
+            isJumping: false,
+            onBar: null,
+            state: "stand" // Possible states: "stand", "run", "jump"
+        };
+
+        const ground = {
+            x: 0,
+            y: canvas.height - 20,
+            width: canvas.width,
+            height: 150,
+            color: "green"
+        };
+
+        const bars = [];
+        for (let i = 0; i < 50; i++) {
+            bars.push({
+                x: Math.random() * (canvas.width - 150),
+                y: canvas.height - (i + 1) * 100,
+                width: 150,
+                height: 10,
+                dx: Math.random() < 0.5 ? 2 : -2
+            });
         }
-        ball.x += ball.dx;
 
-        // Collision with ground
-        if (ball.y + ball.radius > ground.y) {
-            ball.y = ground.y - ball.radius;
-            ball.dy = 0;
-            ball.isJumping = false;
-            ball.onBar = null;
+        const images = {
+            stand: new Image(),
+            run: new Image(),
+            jump: new Image()
+        };
+        images.stand.src = "assets/stand.png";
+        images.run.src = "assets/jump.png";
+        images.jump.src = "assets/jump.png";
+
+        let offsetY = 0;
+
+        function drawBall() {
+            let currentImage;
+            if (ball.state === "stand") {
+                currentImage = images.stand;
+            } else if (ball.state === "run") {
+                currentImage = images.run;
+            } else if (ball.state === "jump") {
+                currentImage = images.jump;
+            }
+
+            const ballWidth = ball.radius * 2;
+            const ballHeight = ball.radius * 2;
+
+            ctx.drawImage(
+                currentImage,
+                ball.x - ball.radius,
+                ball.y - ball.radius - offsetY,
+                ballWidth,
+                ballHeight
+            );
         }
 
-        // Collision with bars
-        let onAnyBar = false;
-        bars.forEach(bar => {
-            if (
-                ball.y + ball.radius >= bar.y &&
-                ball.y + ball.radius <= bar.y + bar.height &&
-                ball.x >= bar.x &&
-                ball.x <= bar.x + bar.width
-            ) {
-                ball.y = bar.y - ball.radius;
+        function drawGround() {
+            ctx.fillStyle = ground.color;
+            ctx.fillRect(ground.x, ground.y - offsetY, canvas.width, ground.height);
+        }
+
+        function drawBars() {
+            bars.forEach(bar => {
+                ctx.fillStyle = "black";
+                ctx.fillRect(bar.x, bar.y - offsetY, bar.width, bar.height);
+            });
+        }
+
+        function moveBars() {
+            bars.forEach(bar => {
+                bar.x += bar.dx;
+
+                // Reverse direction if hitting canvas boundaries
+                if (bar.x <= 0 || bar.x + bar.width >= canvas.width) {
+                    bar.dx *= -1;
+                }
+            });
+        }
+
+        function moveBall() {
+            if (stickyMode && ball.onBar) {
+                ball.x += ball.onBar.dx; // Move with the bar
+            } else {
+                ball.dy += gravity;
+                ball.y += ball.dy;
+            }
+            ball.x += ball.dx;
+
+            // Determine ball state
+            if (ball.dy < 0 || ball.isJumping) {
+                ball.state = "jump";
+            } else if (ball.dx !== 0) {
+                ball.state = "run";
+            } else {
+                ball.state = "stand";
+            }
+
+            // Collision with ground
+            if (ball.y + ball.radius > ground.y) {
+                ball.y = ground.y - ball.radius;
                 ball.dy = 0;
                 ball.isJumping = false;
-                ball.onBar = bar;
-                onAnyBar = true;
+                ball.onBar = null;
             }
-        });
 
-        if (!onAnyBar) {
-            ball.onBar = null;
+            // Collision with bars
+            let onAnyBar = false;
+            bars.forEach(bar => {
+                if (
+                    ball.y + ball.radius >= bar.y &&
+                    ball.y + ball.radius <= bar.y + bar.height &&
+                    ball.x >= bar.x &&
+                    ball.x <= bar.x + bar.width
+                ) {
+                    ball.y = bar.y - ball.radius;
+                    ball.dy = 0;
+                    ball.isJumping = false;
+                    ball.onBar = bar;
+                    onAnyBar = true;
+                }
+            });
+
+            if (!onAnyBar) {
+                ball.onBar = null;
+            }
+
+            // Boundaries
+            if (ball.x - ball.radius < 0) ball.x = ball.radius;
+            if (ball.x + ball.radius > canvas.width) ball.x = canvas.width - ball.radius;
+
+            // Adjust offsetY to keep the ball within 20%-80% of the screen height
+            const upperLimit = canvas.height * 0.2;
+            const lowerLimit = canvas.height * 0.8;
+
+            if (ball.y - offsetY < upperLimit) {
+                offsetY = ball.y - upperLimit;
+            } else if (ball.y - offsetY > lowerLimit) {
+                offsetY = ball.y - lowerLimit;
+            }
         }
 
-        // Boundaries
-        if (ball.x - ball.radius < 0) ball.x = ball.radius;
-        if (ball.x + ball.radius > canvas.width) ball.x = canvas.width - ball.radius;
-
-        // Adjust offsetY to keep the ball within 20%-80% of the screen height
-        const upperLimit = canvas.height * 0.2;
-        const lowerLimit = canvas.height * 0.8;
-
-        if (ball.y - offsetY < upperLimit) {
-            offsetY = ball.y - upperLimit;
-        } else if (ball.y - offsetY > lowerLimit) {
-            offsetY = ball.y - lowerLimit;
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
-    }
 
-    function clearCanvas() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-    }
-
-    function gameLoop() {
-        clearCanvas();
-        drawGround();
-        drawBars();
-        drawBall();
-        moveBall();
-        moveBars();
-        requestAnimationFrame(gameLoop);
-    }
-
-    function keyDownHandler(e) {
-        if (e.code === "ArrowLeft") ball.dx = -5;
-        if (e.code === "ArrowRight") ball.dx = 5;
-        if (e.code === "Space" && !ball.isJumping) {
-            ball.dy = -10;
-            ball.isJumping = true;
-            ball.onBar = null;
+        function gameLoop() {
+            clearCanvas();
+            drawGround();
+            drawBars();
+            drawBall();
+            moveBall();
+            moveBars();
+            requestAnimationFrame(gameLoop);
         }
-    }
 
-    function keyUpHandler(e) {
-        if (e.code === "ArrowLeft" || e.code === "ArrowRight") ball.dx = 0;
-    }
+        function keyDownHandler(e) {
+            if (e.code === "ArrowLeft") ball.dx = -5;
+            if (e.code === "ArrowRight") ball.dx = 5;
+            if (e.code === "Space" && !ball.isJumping) {
+                ball.dy = -10;
+                ball.isJumping = true;
+                ball.onBar = null;
+            }
+        }
 
-    document.addEventListener("keydown", keyDownHandler);
-    document.addEventListener("keyup", keyUpHandler);
+        function keyUpHandler(e) {
+            if (e.code === "ArrowLeft" || e.code === "ArrowRight") ball.dx = 0;
+        }
 
-    gameLoop();
-</script>
-</body>
-</html>
+        document.addEventListener("keydown", keyDownHandler);
+        document.addEventListener("keyup", keyUpHandler);
+
+        gameLoop();
+    </script>
+    </body>
+    </html>
